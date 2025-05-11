@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temple Donation Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .profile-image-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .profile-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .upload-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: #b6e2bd;
+      color: rgb(66, 127, 138);
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    #imageUpload {
+      display: none;
+    }
+
+    .statement-entry:hover {
+      background-color: #e450b2;
+      transition: background-color 0.2s;
+    }
+
+    .modal {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .modal-hidden {
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+    }
+
+    .modal-visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .notification-hidden {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    .notification-visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    body {
+      background: linear-gradient(270deg, #ff7eb3, #ff758c, #ff7eb3, #a68dc7);
+      background-size: 400% 400%;
+      animation: gradientMove 8s ease infinite;
+    }
+
+    @keyframes gradientMove {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <!-- Notification -->
+  <div id="notification" class="notification notification-hidden">
+    <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center">
+      <i class="fas fa-check-circle mr-3 text-xl"></i>
+      <div>
+        <p class="font-semibold">Success!</p>
+        <p class="text-sm">Record saved successfully</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white rounded-lg shadow-md p-6 mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold">Temple Donation Management</h1>
+          <p class="mt-2">Track donations from devotees</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button id="newEntryBtn" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50 transition">
+            <i class="fas fa-plus mr-2"></i> New Entry
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Search Section -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <div class="relative">
+        <input type="text" id="searchInput" placeholder="Search by name or phone number..."
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <i class="fas fa-search absolute right-4 top-4 text-gray-400"></i>
+      </div>
+    </div>
+
+    <!-- Devotee List -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+      <div class="p-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-800">Devotee Records</h2>
+      </div>
+      <div id="devoteeList" class="divide-y divide-gray-200">
+        <!-- Devotees will be listed here -->
+        <div class="p-4 text-center text-gray-500">
+          No devotees found. Add a new entry to get started.
+        </div>
+      </div>
+    </div>
+
+    <!-- New Entry Modal -->
+    <div id="newEntryModal"
+      class="modal modal-hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">New Devotee Entry</h3>
+            <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <form id="devoteeForm" class="space-y-4">
+            <div class="flex justify-center">
+              <div class="profile-image-container">
+                <img id="profileImage" src="https://via.placeholder.com/80" alt="Profile" class="profile-image">
+                <label for="imageUpload" class="upload-btn">
+                  <i class="fas fa-camera text-xs"></i>
+                </label>
+                <input type="file" id="imageUpload" accept="image/*">
+              </div>
+            </div>
+
+            <div>
+              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input type="text" id="name" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+              <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input type="tel" id="phone" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+              <label for="varavu" class="block text-sm font-medium text-gray-700 mb-1">Donation Amount</label>
+              <input type="number" id="varavu" min="0" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div class="pt-4">
+              <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition">
+                Save Entry
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statement Modal -->
+    <div id="statementModal"
+      class="modal modal-hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 id="statementDevoteeName" class="text-xl font-semibold text-gray-800"></h3>
+              <p id="statementDevoteePhone" class="text-sm text-gray-500"></p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <button id="deleteDevoteeBtn" class="text-red-500 hover:text-red-700">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+              <button id="closeStatementModalBtn" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-center mb-6">
+            <img id="statementProfileImage" src="https://via.placeholder.com/100" alt="Profile" class="w-20 h-20 rounded-full object-cover">
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <div class="text-center">
+              <p class="text-sm text-gray-500">Total Donations</p>
+              <p id="totalVaravu" class="text-2xl font-semibold text-green-600">₹0</p>
+            </div>
+          </div>
+
+          <div class="border-b border-gray-200 pb-2 mb-4">
+            <div class="flex justify-between items-center">
+              <h4 class="font-medium text-gray-700">Donation History</h4>
+              <button id="addTransactionBtn" class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+                <i class="fas fa-plus mr-1"></i> Add Donation
+              </button>
+            </div>
+          </div>
+
+          <div id="statementEntries" class="space-y-3 overflow-y-auto max-h-[40vh]">
+            <!-- Donations will be listed here -->
+            <div class="text-center text-gray-500 py-4">
+              No donations found.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="transactionModal"
+      class="modal modal-hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 id="transactionModalTitle" class="text-xl font-semibold text-gray-800">Add Donation</h3>
+            <button id="closeTransactionModalBtn" class="text-gray-500 hover:text-gray-700">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <form id="transactionForm" class="space-y-4">
+            <input type="hidden" id="transactionId">
+            <input type="hidden" id="devoteeId">
+
+            <div>
+              <label for="transactionVaravu" class="block text-sm font-medium text-gray-700 mb-1">Donation Amount</label>
+              <input type="number" id="transactionVaravu" min="0" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+              <label for="transactionNotes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+              <textarea id="transactionNotes" rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="pt-4">
+              <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition">
+                Save Donation
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmationModal"
+      class="modal modal-hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">Confirm Deletion</h3>
+            <button id="closeDeleteModalBtn" class="text-gray-500 hover:text-gray-700">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="mb-6">
+            <p class="text-gray-700">Are you sure you want to delete this devotee record? All associated donations will also be deleted.</p>
+            <p class="text-red-500 font-medium mt-2">This action cannot be undone.</p>
+          </div>
+
+          <div class="flex justify-end space-x-3">
+            <button id="cancelDeleteBtn" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+              Cancel
+            </button>
+            <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data storage
+    let devotees = JSON.parse(localStorage.getItem('devotees')) || [];
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+    let currentDevoteeId = null;
+    let currentTransactionId = null;
+
+    // DOM Elements
+    const devoteeList = document.getElementById('devoteeList');
+    const searchInput = document.getElementById('searchInput');
+    const newEntryBtn = document.getElementById('newEntryBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const newEntryModal = document.getElementById('newEntryModal');
+    const devoteeForm = document.getElementById('devoteeForm');
+    const profileImage = document.getElementById('profileImage');
+    const imageUpload = document.getElementById('imageUpload');
+    const statementModal = document.getElementById('statementModal');
+    const closeStatementModalBtn = document.getElementById('closeStatementModalBtn');
+    const deleteDevoteeBtn = document.getElementById('deleteDevoteeBtn');
+    const statementDevoteeName = document.getElementById('statementDevoteeName');
+    const statementDevoteePhone = document.getElementById('statementDevoteePhone');
+    const statementProfileImage = document.getElementById('statementProfileImage');
+    const statementEntries = document.getElementById('statementEntries');
+    const totalVaravu = document.getElementById('totalVaravu');
+    const addTransactionBtn = document.getElementById('addTransactionBtn');
+    const transactionModal = document.getElementById('transactionModal');
+    const closeTransactionModalBtn = document.getElementById('closeTransactionModalBtn');
+    const transactionForm = document.getElementById('transactionForm');
+    const transactionModalTitle = document.getElementById('transactionModalTitle');
+    const transactionId = document.getElementById('transactionId');
+    const devoteeId = document.getElementById('devoteeId');
+    const transactionVaravu = document.getElementById('transactionVaravu');
+    const transactionNotes = document.getElementById('transactionNotes');
+    const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
+    const closeDeleteModalBtn = document.getElementById('closeDeleteModalBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const notification = document.getElementById('notification');
+
+    // Event Listeners
+    newEntryBtn.addEventListener('click', () => {
+      newEntryModal.classList.remove('modal-hidden');
+      newEntryModal.classList.add('modal-visible');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      newEntryModal.classList.remove('modal-visible');
+      newEntryModal.classList.add('modal-hidden');
+      devoteeForm.reset();
+      profileImage.src = 'https://via.placeholder.com/80';
+    });
+
+    closeStatementModalBtn.addEventListener('click', () => {
+      statementModal.classList.remove('modal-visible');
+      statementModal.classList.add('modal-hidden');
+      currentDevoteeId = null;
+    });
+
+    closeTransactionModalBtn.addEventListener('click', () => {
+      transactionModal.classList.remove('modal-visible');
+      transactionModal.classList.add('modal-hidden');
+      transactionForm.reset();
+      currentTransactionId = null;
+    });
+
+    deleteDevoteeBtn.addEventListener('click', () => {
+      deleteConfirmationModal.classList.remove('modal-hidden');
+      deleteConfirmationModal.classList.add('modal-visible');
+    });
+
+    closeDeleteModalBtn.addEventListener('click', () => {
+      deleteConfirmationModal.classList.remove('modal-visible');
+      deleteConfirmationModal.classList.add('modal-hidden');
+    });
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      deleteConfirmationModal.classList.remove('modal-visible');
+      deleteConfirmationModal.classList.add('modal-hidden');
+    });
+
+    confirmDeleteBtn.addEventListener('click', () => {
+      if (currentDevoteeId) {
+        // Remove devotee
+        devotees = devotees.filter(d => d.id !== currentDevoteeId);
+        saveDevotees();
+        
+        // Remove associated transactions
+        transactions = transactions.filter(t => t.devoteeId !== currentDevoteeId);
+        saveTransactions();
+        
+        // Close modals
+        deleteConfirmationModal.classList.remove('modal-visible');
+        deleteConfirmationModal.classList.add('modal-hidden');
+        statementModal.classList.remove('modal-visible');
+        statementModal.classList.add('modal-hidden');
+        
+        // Refresh list
+        renderDevoteeList();
+      }
+    });
+
+    imageUpload.addEventListener('change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          profileImage.src = event.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+
+    searchInput.addEventListener('input', function() {
+      renderDevoteeList(this.value.toLowerCase());
+    });
+
+    devoteeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('name').value;
+      const phone = document.getElementById('phone').value;
+      const varavu = parseFloat(document.getElementById('varavu').value) || 0;
+      const image = profileImage.src;
+      
+      const devotee = {
+        id: Date.now().toString(),
+        name,
+        phone,
+        image,
+        createdAt: new Date().toISOString()
+      };
+      
+      devotees.push(devotee);
+      saveDevotees();
+      
+      if (varavu > 0) {
+        const transaction = {
+          id: Date.now().toString(),
+          devoteeId: devotee.id,
+          varavu,
+          notes: 'Initial donation',
+          createdAt: new Date().toISOString()
+        };
+        transactions.push(transaction);
+        saveTransactions();
+      }
+      
+      devoteeForm.reset();
+      profileImage.src = 'https://via.placeholder.com/80';
+      newEntryModal.classList.remove('modal-visible');
+      newEntryModal.classList.add('modal-hidden');
+      
+      // Show success notification
+      showNotification();
+      
+      renderDevoteeList();
+    });
+
+    addTransactionBtn.addEventListener('click', () => {
+      transactionModalTitle.textContent = 'Add Donation';
+      transactionId.value = '';
+      transactionVaravu.value = '0';
+      transactionNotes.value = '';
+      devoteeId.value = currentDevoteeId;
+      
+      transactionModal.classList.remove('modal-hidden');
+      transactionModal.classList.add('modal-visible');
+    });
+
+    transactionForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const varavu = parseFloat(transactionVaravu.value) || 0;
+      const notes = transactionNotes.value;
+      const devoteeIdValue = devoteeId.value;
+      
+      if (currentTransactionId) {
+        // Update existing transaction
+        const index = transactions.findIndex(t => t.id === currentTransactionId);
+        if (index !== -1) {
+          transactions[index] = {
+            ...transactions[index],
+            varavu,
+            notes,
+            updatedAt: new Date().toISOString()
+          };
+        }
+      } else {
+        // Add new transaction
+        const transaction = {
+          id: Date.now().toString(),
+          devoteeId: devoteeIdValue,
+          varavu,
+          notes,
+          createdAt: new Date().toISOString()
+        };
+        transactions.push(transaction);
+      }
+      
+      saveTransactions();
+      renderStatement(currentDevoteeId);
+      
+      transactionForm.reset();
+      transactionModal.classList.remove('modal-visible');
+      transactionModal.classList.add('modal-hidden');
+      currentTransactionId = null;
+      
+      // Show success notification
+      showNotification();
+    });
+
+    // Functions
+    function saveDevotees() {
+      localStorage.setItem('devotees', JSON.stringify(devotees));
+    }
+
+    function saveTransactions() {
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+    }
+
+    function showNotification() {
+      notification.classList.remove('notification-hidden');
+      notification.classList.add('notification-visible');
+      
+      setTimeout(() => {
+        notification.classList.remove('notification-visible');
+        notification.classList.add('notification-hidden');
+      }, 3000);
+    }
+
+    function renderDevoteeList(searchTerm = '') {
+      let filteredDevotees = devotees;
+      
+      if (searchTerm) {
+        filteredDevotees = devotees.filter(devotee => 
+          devotee.name.toLowerCase().includes(searchTerm) || 
+          devotee.phone.includes(searchTerm)
+        );
+      }
+      
+      if (filteredDevotees.length === 0) {
+        devoteeList.innerHTML = `
+          <div class="p-4 text-center text-gray-500">
+            No devotees found. ${searchTerm ? 'Try a different search.' : 'Add a new entry to get started.'}
+          </div>
+        `;
+        return;
+      }
+      
+      devoteeList.innerHTML = filteredDevotees.map(devotee => {
+        const devoteeTransactions = transactions.filter(t => t.devoteeId === devotee.id);
+        const totalDonations = devoteeTransactions.reduce((sum, t) => sum + (t.varavu || 0), 0);
+        
+        return `
+          <div class="p-4 hover:bg-gray-50 cursor-pointer devotee-item" data-id="${devotee.id}">
+            <div class="flex items-center space-x-4">
+              <img src="${devotee.image}" alt="${devotee.name}" class="w-12 h-12 rounded-full object-cover">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 truncate">${devotee.name}</p>
+                <p class="text-sm text-gray-500 truncate">${devotee.phone}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-green-600">₹${totalDonations.toFixed(2)}</p>
+                <p class="text-xs text-gray-500">${devoteeTransactions.length} donations</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add click event to devotee items
+      document.querySelectorAll('.devotee-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const id = this.getAttribute('data-id');
+          currentDevoteeId = id;
+          renderStatement(id);
+          
+          statementModal.classList.remove('modal-hidden');
+          statementModal.classList.add('modal-visible');
+        });
+      });
+    }
+
+    function renderStatement(devoteeId) {
+      const devotee = devotees.find(d => d.id === devoteeId);
+      if (!devotee) return;
+      
+      statementDevoteeName.textContent = devotee.name;
+      statementDevoteePhone.textContent = devotee.phone;
+      statementProfileImage.src = devotee.image;
+      
+      const devoteeTransactions = transactions.filter(t => t.devoteeId === devoteeId)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      const totalVaravuValue = devoteeTransactions.reduce((sum, t) => sum + (t.varavu || 0), 0);
+      
+      totalVaravu.textContent = `₹${totalVaravuValue.toFixed(2)}`;
+      
+      if (devoteeTransactions.length === 0) {
+        statementEntries.innerHTML = `
+          <div class="text-center text-gray-500 py-4">
+            No donations found.
+          </div>
+        `;
+        return;
+      }
+      
+      statementEntries.innerHTML = devoteeTransactions.map(transaction => {
+        const date = new Date(transaction.createdAt);
+        const formattedDate = date.toLocaleDateString();
+        const formattedTime = date.toLocaleTimeString();
+        
+        return `
+          <div class="statement-entry bg-white rounded-lg p-4 shadow-sm" data-id="${transaction.id}">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="text-sm font-medium text-gray-700">${formattedDate} at ${formattedTime}</p>
+                ${transaction.notes ? `<p class="text-xs text-gray-500 mt-1">${transaction.notes}</p>` : ''}
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-green-600">₹${transaction.varavu.toFixed(2)}</p>
+              </div>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+              <button class="edit-transaction text-xs text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-edit mr-1"></i> Edit
+              </button>
+              <button class="delete-transaction text-xs text-red-600 hover:text-red-800">
+                <i class="fas fa-trash-alt mr-1"></i> Delete
+              </button>
+              <button class="download-statement text-xs text-blue-600 hover:text-blue-800">
+                <i class="fas fa-download mr-1"></i> Download
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Add click event to edit buttons
+      document.querySelectorAll('.edit-transaction').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const transactionId = this.closest('.statement-entry').getAttribute('data-id');
+          const transaction = transactions.find(t => t.id === transactionId);
+          
+          if (transaction) {
+            currentTransactionId = transaction.id;
+            transactionModalTitle.textContent = 'Edit Donation';
+            transactionId.value = transaction.id;
+            devoteeId.value = transaction.devoteeId;
+            transactionVaravu.value = transaction.varavu;
+            transactionNotes.value = transaction.notes || '';
+            
+            transactionModal.classList.remove('modal-hidden');
+            transactionModal.classList.add('modal-visible');
+          }
+        });
+      });
+      
+      // Add click event to delete buttons
+      document.querySelectorAll('.delete-transaction').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const transactionId = this.closest('.statement-entry').getAttribute('data-id');
+          
+          // Remove transaction
+          transactions = transactions.filter(t => t.id !== transactionId);
+          saveTransactions();
+          
+          // Refresh statement
+          renderStatement(devoteeId);
+          
+          // Show success notification
+          showNotification();
+        });
+      });
+    }
+
+    // Initialize
+    renderDevoteeList();
+  </script>
